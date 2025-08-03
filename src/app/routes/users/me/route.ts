@@ -63,6 +63,11 @@ router
         
     } catch(e) {
 
+        res.status(500);
+        return {
+            error: '서버 오류가 발생했습니다'
+        };
+
     }
 
 });

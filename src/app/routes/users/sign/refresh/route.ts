@@ -45,8 +45,8 @@ router
         const userRepo = repo.getRepository('defaultUser');   
 
         try {
-            // TypeScript가 validatedData의 타입을 올바르게 추론하도록 명시적 타입 체크
-            if (!req.validatedData?.body) {
+
+            if (req.validatedData?.body) {
                 res.status(400);
                 return {
                     error: '요청 데이터가 올바르지 않습니다'
@@ -55,8 +55,6 @@ router
 
             const { refreshToken } = req.validatedData.body;
             
-            // 타입 확인: refreshToken은 이제 string 타입이어야 함
-            // (required: true이므로 undefined가 아님)
 
             // 1. Refresh Token 검증
             let payload;
