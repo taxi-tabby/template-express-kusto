@@ -28,6 +28,7 @@ export default () => {
             const param = req.with.authRateLimiterOption;
             var adminUUID: string | undefined = undefined;
 
+            // 개발 환경에서는 똥같으니까 안 함
             if (process.env.NODE_ENV === 'development') {
                 next();
                 return;
@@ -58,6 +59,8 @@ export default () => {
 
             const windowStart = new Date(Math.floor(currentTime / rateLimit.windowMs) * rateLimit.windowMs);
             const windowEnd = new Date(windowStart.getTime() + rateLimit.windowMs);
+
+            console.log(`Rate Limiter: ${ip} - ${req.originalUrl} - ${req.method} - ${windowStart.toISOString()} ~ ${windowEnd.toISOString()}`);
 
             if (repoName === undefined) {
                 return res.status(400).json({ error: 'Repository name is required' });
