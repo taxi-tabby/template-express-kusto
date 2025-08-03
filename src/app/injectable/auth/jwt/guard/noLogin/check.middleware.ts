@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import JWTService from '../jsonWebToken.module';
-import { TokenPayload } from '../type';
+import JWTService from '../../jsonWebToken.module';
+import { TokenPayload } from '../../type';
 
 export default () => {
 

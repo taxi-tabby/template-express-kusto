@@ -8,7 +8,7 @@ export default () => {
      */
     const authenticate = (req: Request, res: Response, next: NextFunction) => {
         // WITH 메서드에서 전달된 파라미터 접근
-        const middlewareParams = req.with.authJwtGuardGuide;
+        const middlewareParams = req.with.authJwtGuardRoleGuide;
 
         
         const token = req.headers.authorization?.replace('Bearer ', '');
@@ -39,7 +39,7 @@ export default () => {
      */
     const authorize = (req: Request, res: Response, next: NextFunction) => {
 
-        const middlewareParams = req.with.authJwtGuardGuide;
+        const middlewareParams = req.with.authJwtGuardRoleGuide;
 
         const requiredRoles = middlewareParams?.requiredRoles || [];
 

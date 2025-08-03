@@ -3,9 +3,7 @@ const router = new ExpressRouter();
 
 
 router
-.WITH('authJwtGuardCheck', {
-  requiredRoles: ['user']
-})
+.WITH('authJwtGuardCheck')
 .GET_VALIDATED({
     
 }, {
