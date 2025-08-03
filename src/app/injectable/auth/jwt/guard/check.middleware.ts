@@ -108,22 +108,28 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
         // 7. 세션 활동 시간 업데이트
         await userRepo.updateSessionActivity(jti, req.ip);
 
-        // 8. 요청 객체에 사용자 정보 추가
-        (req as any).user = {
-            id: user.id,
-            uuid: user.uuid,
-            email: user.email,
-            isActive: user.isActive,
-            isVerified: user.isVerified,
-            session: {
-                jti: session.jti,
-                familyId: session.familyId,
-                deviceId: session.deviceId,
-                generation: session.generation
-            }
-        };
+        // 사용자 정보를 요청 객체에 추가
+        let userValue = jwt.createAuthenticatedUser();
+        let sessionValue = jwt.createUserSession();
 
-        (req as any).session = session;
+        sessionValue.jti = session.jti;
+        sessionValue.familyId = session.familyId;
+        sessionValue.deviceId = session.deviceId || '';
+        sessionValue.generation = session.generation;
+        sessionValue.refreshJti = session.refreshJti || undefined;
+        sessionValue.refreshTokenExpiresAt = session.refreshTokenExpiresAt || undefined;
+
+        userValue.id = String(user.id);
+        userValue.uuid = user.uuid;
+        userValue.email = user.email;
+        userValue.isActive = user.isActive;
+        userValue.isVerified = user.isVerified;
+        userValue.session = sessionValue;
+
+
+        // 8. 요청 객체에 사용자 정보 추가
+        (req as any).user = userValue;
+        (req as any).session = sessionValue;
         (req as any).jti = jti;
 
         next();

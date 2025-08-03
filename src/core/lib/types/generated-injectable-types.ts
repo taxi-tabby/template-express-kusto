@@ -11,11 +11,13 @@ import { AuthTryMiddlewareParams as AuthJWTGuardRoleGuideAuthTryMiddlewareParams
 import AuthJWTJsonWebTokenModule from '@app/injectable/auth/jwt/jsonWebToken.module';
 import AuthRateLimiterDefaultMiddleware from '@app/injectable/auth/rateLimiter/default.middleware';
 import { RateLimiterOptionMiddlewareParams as AuthRateLimiterOptionRateLimiterOptionMiddlewareParamsType } from '@app/injectable/auth/rateLimiter/option.middleware.interface';
+import ConstantDBModule from '@app/injectable/constant/db.module';
 
 // Type definitions
 type AuthCSRFHelperModuleType = InstanceType<typeof AuthCSRFHelperModule>;
 type AuthCSRFMiddlewareModuleType = InstanceType<typeof AuthCSRFMiddlewareModule>;
 type AuthJWTJsonWebTokenModuleType = InstanceType<typeof AuthJWTJsonWebTokenModule>;
+type ConstantDBModuleType = InstanceType<typeof ConstantDBModule>;
 type AuthCSRFReferrerMiddlewareType = ReturnType<typeof AuthCSRFReferrerMiddleware>;
 type AuthJWTGuardCheckMiddlewareType = ReturnType<typeof AuthJWTGuardCheckMiddleware>;
 type AuthJWTGuardNoLoginCheckMiddlewareType = ReturnType<typeof AuthJWTGuardNoLoginCheckMiddleware>;
@@ -29,6 +31,7 @@ export interface Injectable {
   authCsrfHelper: AuthCSRFHelperModuleType;
   authCsrfMiddleware: AuthCSRFMiddlewareModuleType;
   authJwtJsonWebToken: AuthJWTJsonWebTokenModuleType;
+  constantDb: ConstantDBModuleType;
 }
 
 // Middleware interface
@@ -51,6 +54,7 @@ export const MODULE_REGISTRY = {
   'authCsrfHelper': () => import('@app/injectable/auth/csrf/helper.module'),
   'authCsrfMiddleware': () => import('@app/injectable/auth/csrf/middleware.module'),
   'authJwtJsonWebToken': () => import('@app/injectable/auth/jwt/jsonWebToken.module'),
+  'constantDb': () => import('@app/injectable/constant/db.module'),
 } as const;
 
 // Middleware registry for dynamic loading

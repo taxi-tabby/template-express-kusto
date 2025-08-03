@@ -29,11 +29,15 @@ router
         const jwt = injected.authJwtJsonWebToken;                  
         const userRepo = repo.getRepository('defaultUser');   
 
+
         try {
             // 1. 현재 인증된 사용자 정보 가져오기 (authJwtGuardCheck 미들웨어에서 설정됨)
-            const user = (req as any).user;
+            
+                
+            const user = jwt.createAuthenticatedUser((req as any).user);
+            const session = jwt.createUserSession((req as any).session);
             const currentJti = (req as any).jti;
-            const session = (req as any).session;
+
 
             if (!user || !currentJti || !session) {
                 res.status(404);
@@ -61,6 +65,7 @@ router
                         userAgent: req.get('User-Agent')
                     });
                 }
+                
 
                 // 리프레시 토큰도 블랙리스트에 추가 (있는 경우)
                 if (session.refreshJti) {

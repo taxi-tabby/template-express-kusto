@@ -46,5 +46,25 @@ export interface UserDbRecord {
     [key: string]: any;
 }
 
+// === User Session Types ===
+
+export interface UserSession {
+    jti: string;
+    familyId: string;
+    deviceId: string;
+    generation: number;
+    refreshJti?: string;
+    refreshTokenExpiresAt?: Date;
+}
+
+export interface AuthenticatedUser {
+    id: string;
+    uuid: string;
+    email: string;
+    isActive: boolean;
+    isVerified: boolean;
+    session: UserSession;
+}
+
 // === Callback Types ===
 export type UserLookupCallback = (email: string) => Promise<UserDbRecord | null>;

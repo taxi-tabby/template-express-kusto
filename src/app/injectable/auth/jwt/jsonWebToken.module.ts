@@ -1,7 +1,7 @@
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { TokenPayload } from './type';
+import { TokenPayload, AuthenticatedUser, UserSession } from './type';
 
 interface JWTConfig {
     accessTokenSecret: string;
@@ -226,6 +226,57 @@ export default class JWTService {
             return null;
         }
     }
+
+
+    /**
+     * JWT 페이로드를 생성합니다
+     * 타입 제공용 함수입니다. 최대한 비어 있어야 합니다.
+     */
+    createTokenPayload(): TokenPayload {
+        return {
+            userId: '',
+            uuid: '',
+            email: '',
+            role: [],
+            jti: '',
+            jwtVersion: 1,
+            iat: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + 3600 // 기본 1시간 후 만료
+        };
+    }
+
+    /**
+     * 사용자 세션 정보를 생성합니다
+     * 타입 제공용 함수입니다. 최대한 비어 있어야 합니다.
+     */
+    createUserSession(data?: Partial<UserSession>): UserSession {
+        return {
+            jti: data?.jti || '',
+            familyId: data?.familyId || '',
+            deviceId: data?.deviceId || '',
+            generation: data?.generation || 0,
+            refreshJti: data?.refreshJti || undefined,
+            refreshTokenExpiresAt: data?.refreshTokenExpiresAt || undefined
+        };
+    }
+
+    /**
+     * 인증된 사용자 정보를 생성합니다
+     * 타입 제공용 함수입니다. 최대한 비어 있어야 합니다.
+     */
+    createAuthenticatedUser(userData?: Partial<Omit<AuthenticatedUser, 'session'>>, sessionData?: Partial<UserSession>): AuthenticatedUser {
+        return {
+            id: userData?.id || '',
+            uuid: userData?.uuid || '',
+            email: userData?.email || '',
+            isActive: userData?.isActive || false,
+            isVerified: userData?.isVerified || false,
+            session: this.createUserSession(sessionData)
+        };
+    }
+
+
+
 }
 
 
