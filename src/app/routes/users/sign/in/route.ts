@@ -46,11 +46,15 @@ router
         const jwt = injected.authJwtJsonWebToken;                  
         const userRepo = repo.getRepository('defaultUser');   
         const data = req.validatedData;    
+
+        
+
+
         let _userInfo: any = null;
 
         try {
             // 1. 사용자 조회 및 기본 검증
-            _userInfo = await userRepo.findByEmail(data?.body.email);
+            _userInfo = await userRepo.findByEmail(data.body.email);
 
             if (!_userInfo) {
                 // 로그인 실패 로그 (사용자 없음)
@@ -59,7 +63,7 @@ router
                     action: 'LOGIN',
                     resource: 'authentication',
                     newValues: { 
-                        email: data?.body.email,
+                        email: data.body.email,
                         result: 'failed',
                         reason: 'user_not_found'
                     },
