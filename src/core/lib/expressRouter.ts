@@ -120,10 +120,10 @@ export class ExpressRouter {
                 this.schemaAnalyzer = PrismaSchemaAnalyzer.getInstance(firstClient, firstDatabase);
             }
 
-            // 한 번만 출력
-            if (ExpressRouter.initializedDatabases.size === availableDatabases.length) {
-                console.log(`📊 사용 가능한 데이터베이스: ${availableDatabases.join(', ')}`);
-            }
+            // // 한 번만 출력
+            // if (ExpressRouter.initializedDatabases.size === availableDatabases.length) {
+            //     console.log(`📊 사용 가능한 데이터베이스: ${availableDatabases.join(', ')}`);
+            // }
         } catch (error) {
             console.warn('스키마 분석기 초기화 실패:', error instanceof Error ? error.message : String(error));
         }

@@ -15,6 +15,7 @@ export interface TokenPayload {
     email: string;
     role?: string[];
     jti?: string;
+    jwtVersion?: number;
     iat?: number;
     exp?: number;
 }

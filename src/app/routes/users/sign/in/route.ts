@@ -168,12 +168,13 @@ router
             const deviceId = jwt.generateDeviceId(req.get('User-Agent'), req.ip);
             const familyId = jwt.generateFamilyId(_userInfo.uuid, deviceId);
 
-            // 토큰 페이로드 생성
+            // 토큰 페이로드 생성 (현재 JWT 버전 포함)
             const tokenPayload = {
                 userId: String(_userInfo.id),
                 uuid: _userInfo.uuid.toString(),
                 email: _userInfo.email,
-                role: withRoles?.roles.map((userRole: any) => userRole.role.uuid) ?? []
+                role: withRoles?.roles.map((userRole: any) => userRole.role.uuid) ?? [],
+                jwtVersion: _userInfo.jwtVersion || 1 // 사용자의 현재 JWT 버전
             };
 
             // 액세스 토큰 생성

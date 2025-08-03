@@ -11,6 +11,7 @@ export interface UserBase {
     isSuspended: boolean;
     createdAt: Date;
     passwordHash: string;
+    jwtVersion?: number;
 }
 
 export interface UserAuth {

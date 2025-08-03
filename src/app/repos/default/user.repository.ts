@@ -69,7 +69,8 @@ export default class UserRepository extends BaseRepository<'default'> {
                 isSuspended: true,
                 createdAt: true,
                 updatedAt: true,
-                passwordHash: true
+                passwordHash: true,
+                jwtVersion: true
             }
         });
     }
