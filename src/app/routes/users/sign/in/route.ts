@@ -37,6 +37,9 @@ router
         400: {
             error: { type: 'string', required: true }
         },
+        500: {
+            error: { type: 'string', required: true }
+        },
     },
     async (req, res, injected, repo, db) => {
     
