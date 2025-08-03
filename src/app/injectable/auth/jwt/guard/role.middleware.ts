@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import JWTService from './export.module';
-import { TokenPayload } from './type';
+import JWTService from '../jsonWebToken.module';
+import { TokenPayload } from '../type';
 
 export default () => {
 
@@ -41,7 +41,7 @@ export default () => {
     const authorize = (req: Request, res: Response, next: NextFunction) => {
 
         
-        const middlewareParams = req.with.authJwtGuide;
+        const middlewareParams = req.with.authJwtGuardGuide;
 
         const requiredRoles = middlewareParams?.requiredRoles || [];
 

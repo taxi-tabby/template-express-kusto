@@ -1,6 +1,6 @@
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
-import { TokenPayload, SignInCredentials, SignInResult, UserDbRecord, UserLookupCallback } from './type';
+import { TokenPayload } from './type';
 
 interface JWTConfig {
     accessTokenSecret: string;
@@ -165,6 +165,7 @@ export default class JWTService {
         
         const newTokenPayload = {
             userId: decoded.userId,
+            uuid: decoded.uuid,
             email: decoded.email,
             role: decoded.role
         };

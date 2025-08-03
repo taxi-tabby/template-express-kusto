@@ -4,51 +4,45 @@
 import AuthCSRFHelperModule from '@app/injectable/auth/csrf/helper.module';
 import AuthCSRFMiddlewareModule from '@app/injectable/auth/csrf/middleware.module';
 import AuthCSRFReferrerMiddleware from '@app/injectable/auth/csrf/referrer.middleware';
-import { AuthTryMiddlewareParams as AuthGuideAuthTryMiddlewareParamsType } from '@app/injectable/auth/guide.middleware.interface';
-import AuthJsonWebTokenModule from '@app/injectable/auth/jsonWebToken.module';
-import AuthJWTExportModule from '@app/injectable/auth/jwt/export.module';
-import { AuthTryMiddlewareParams as AuthJWTGuideAuthTryMiddlewareParamsType } from '@app/injectable/auth/jwt/guide.middleware.interface';
-import AuthJWTNoLoginOnlyMiddleware from '@app/injectable/auth/jwt/noLoginOnly.middleware';
-import AuthJWTRoleMiddleware from '@app/injectable/auth/jwt/role.middleware';
+import AuthJWTGuardCheckMiddleware from '@app/injectable/auth/jwt/guard/check.middleware';
+import { AuthTryMiddlewareParams as AuthJWTGuardGuideAuthTryMiddlewareParamsType } from '@app/injectable/auth/jwt/guard/guide.middleware.interface';
+import AuthJWTGuardNoLoginOnlyMiddleware from '@app/injectable/auth/jwt/guard/noLoginOnly.middleware';
+import AuthJWTGuardRoleMiddleware from '@app/injectable/auth/jwt/guard/role.middleware';
+import AuthJWTJsonWebTokenModule from '@app/injectable/auth/jwt/jsonWebToken.module';
 import AuthRateLimiterDefaultMiddleware from '@app/injectable/auth/rateLimiter/default.middleware';
 import { RateLimiterOptionMiddlewareParams as AuthRateLimiterOptionRateLimiterOptionMiddlewareParamsType } from '@app/injectable/auth/rateLimiter/option.middleware.interface';
-import AuthTRYMiddleware from '@app/injectable/auth/try.middleware';
 
 // Type definitions
 type AuthCSRFHelperModuleType = InstanceType<typeof AuthCSRFHelperModule>;
 type AuthCSRFMiddlewareModuleType = InstanceType<typeof AuthCSRFMiddlewareModule>;
-type AuthJsonWebTokenModuleType = InstanceType<typeof AuthJsonWebTokenModule>;
-type AuthJWTExportModuleType = InstanceType<typeof AuthJWTExportModule>;
+type AuthJWTJsonWebTokenModuleType = InstanceType<typeof AuthJWTJsonWebTokenModule>;
 type AuthCSRFReferrerMiddlewareType = ReturnType<typeof AuthCSRFReferrerMiddleware>;
-type AuthJWTNoLoginOnlyMiddlewareType = ReturnType<typeof AuthJWTNoLoginOnlyMiddleware>;
-type AuthJWTRoleMiddlewareType = ReturnType<typeof AuthJWTRoleMiddleware>;
+type AuthJWTGuardCheckMiddlewareType = ReturnType<typeof AuthJWTGuardCheckMiddleware>;
+type AuthJWTGuardNoLoginOnlyMiddlewareType = ReturnType<typeof AuthJWTGuardNoLoginOnlyMiddleware>;
+type AuthJWTGuardRoleMiddlewareType = ReturnType<typeof AuthJWTGuardRoleMiddleware>;
 type AuthRateLimiterDefaultMiddlewareType = ReturnType<typeof AuthRateLimiterDefaultMiddleware>;
-type AuthTRYMiddlewareType = ReturnType<typeof AuthTRYMiddleware>;
-type authGuideMiddlewareParamsType = AuthGuideAuthTryMiddlewareParamsType;
-type authJwtGuideMiddlewareParamsType = AuthJWTGuideAuthTryMiddlewareParamsType;
+type authJwtGuardGuideMiddlewareParamsType = AuthJWTGuardGuideAuthTryMiddlewareParamsType;
 type authRateLimiterOptionMiddlewareParamsType = AuthRateLimiterOptionRateLimiterOptionMiddlewareParamsType;
 
 // Injectable modules interface
 export interface Injectable {
   authCsrfHelper: AuthCSRFHelperModuleType;
   authCsrfMiddleware: AuthCSRFMiddlewareModuleType;
-  authJsonWebToken: AuthJsonWebTokenModuleType;
-  authJwtExport: AuthJWTExportModuleType;
+  authJwtJsonWebToken: AuthJWTJsonWebTokenModuleType;
 }
 
 // Middleware interface
 export interface Middleware {
   authCsrfReferrer: AuthCSRFReferrerMiddlewareType;
-  authJwtNoLoginOnly: AuthJWTNoLoginOnlyMiddlewareType;
-  authJwtRole: AuthJWTRoleMiddlewareType;
+  authJwtGuardCheck: AuthJWTGuardCheckMiddlewareType;
+  authJwtGuardNoLoginOnly: AuthJWTGuardNoLoginOnlyMiddlewareType;
+  authJwtGuardRole: AuthJWTGuardRoleMiddlewareType;
   authRateLimiterDefault: AuthRateLimiterDefaultMiddlewareType;
-  authTry: AuthTRYMiddlewareType;
 }
 
 // Middleware parameters interface
 export interface MiddlewareParams {
-  authGuide: authGuideMiddlewareParamsType;
-  authJwtGuide: authJwtGuideMiddlewareParamsType;
+  authJwtGuardGuide: authJwtGuardGuideMiddlewareParamsType;
   authRateLimiterOption: authRateLimiterOptionMiddlewareParamsType;
 }
 
@@ -56,25 +50,24 @@ export interface MiddlewareParams {
 export const MODULE_REGISTRY = {
   'authCsrfHelper': () => import('@app/injectable/auth/csrf/helper.module'),
   'authCsrfMiddleware': () => import('@app/injectable/auth/csrf/middleware.module'),
-  'authJsonWebToken': () => import('@app/injectable/auth/jsonWebToken.module'),
-  'authJwtExport': () => import('@app/injectable/auth/jwt/export.module'),
+  'authJwtJsonWebToken': () => import('@app/injectable/auth/jwt/jsonWebToken.module'),
 } as const;
 
 // Middleware registry for dynamic loading
 export const MIDDLEWARE_REGISTRY = {
   'authCsrfReferrer': () => import('@app/injectable/auth/csrf/referrer.middleware'),
-  'authJwtNoLoginOnly': () => import('@app/injectable/auth/jwt/noLoginOnly.middleware'),
-  'authJwtRole': () => import('@app/injectable/auth/jwt/role.middleware'),
+  'authJwtGuardCheck': () => import('@app/injectable/auth/jwt/guard/check.middleware'),
+  'authJwtGuardNoLoginOnly': () => import('@app/injectable/auth/jwt/guard/noLoginOnly.middleware'),
+  'authJwtGuardRole': () => import('@app/injectable/auth/jwt/guard/role.middleware'),
   'authRateLimiterDefault': () => import('@app/injectable/auth/rateLimiter/default.middleware'),
-  'authTry': () => import('@app/injectable/auth/try.middleware'),
 } as const;
 
 // Middleware parameter mapping
 export const MIDDLEWARE_PARAM_MAPPING = {
-  'authJwtNoLoginOnly': 'authJwtGuide',
-  'authJwtRole': 'authJwtGuide',
+  'authJwtGuardCheck': 'authJwtGuardGuide',
+  'authJwtGuardNoLoginOnly': 'authJwtGuardGuide',
+  'authJwtGuardRole': 'authJwtGuardGuide',
   'authRateLimiterDefault': 'authRateLimiterOption',
-  'authTry': 'authGuide',
 } as const;
 
 // Module names type

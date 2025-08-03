@@ -10,6 +10,7 @@ export interface JWTConfig {
 }
 
 export interface TokenPayload {
+    userId: string;
     uuid: string;
     email: string;
     role?: string[];
@@ -34,30 +35,14 @@ export interface SignInResult {
     message?: string;
 }
 
-export interface UserBase {
-    uuid: string;
+export interface UserDbRecord {
+    id: string;
     email: string;
-    username: string | null;
-    passwordHash: string;
-    isActive: boolean;
-    isVerified: boolean;
-    isSuspended: boolean;
-    createdAt: Date;
+    hashedPassword: string;
+    role?: string;
+    isActive?: boolean;
+    [key: string]: any;
 }
 
-
-export interface AdminBase {
-    uuid: string;
-    email: string;
-    username: string | null;
-    passwordHash: string;
-    isActive: boolean;
-    isSuspended: boolean;
-    createdAt: Date;
-}
-
-
-// export interface RepositoryAction {
-//     findByEmail: (username: string) => Promise<any | null>;
-//     findWithRoles: (uuid: string) => Promise<any | null>;
-// }
+// === Callback Types ===
+export type UserLookupCallback = (email: string) => Promise<UserDbRecord | null>;

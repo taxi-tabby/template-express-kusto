@@ -16,19 +16,19 @@ export default () => {
      * 기본 Rate Limiter 미들웨어
      * - 요청 제한을 위한 기본 설정을 적용합니다.
      * - 환경 변수에 따라 동작합니다.
-     */    
-    return [        
+     */
+    return [
         (req: Request, res: Response, next: NextFunction) => {
-            const jwt = req.kusto.injectable.authJwtExport;
+            const jwt = req.kusto.injectable.authJwtJsonWebToken;
             token = jwt.extractTokenFromHeader(req.headers.authorization);
             next();
         },
         async (req: Request, res: Response, next: NextFunction) => {
-            const jwt = req.kusto.injectable.authJwtExport;
+            const jwt = req.kusto.injectable.authJwtJsonWebToken;
             const param = req.with.authRateLimiterOption;
             var adminUUID: string | undefined = undefined;
 
-            if (process.env.NODE_ENV === 'development' ) {
+            if (process.env.NODE_ENV === 'development') {
                 next();
                 return;
             }
@@ -42,13 +42,13 @@ export default () => {
 
             const rateLimit = {
                 maxRequests: param.maxRequests || parseInt('10'),
-                windowMs: param.windowMs || parseInt('60000'), 
+                windowMs: param.windowMs || parseInt('60000'),
                 message: param.message || '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.'
             };
 
             const ip = req.ip; // IP 주소를 키로 사용
             const currentTime = Date.now();
-            
+
             if (token !== null) {
                 const payload = jwt.verifyAccessToken(token ?? '');
                 adminUUID = payload.uuid;
@@ -57,11 +57,16 @@ export default () => {
 
 
             const windowStart = new Date(Math.floor(currentTime / rateLimit.windowMs) * rateLimit.windowMs);
-            const windowEnd = new Date(windowStart.getTime() + rateLimit.windowMs);      
+            const windowEnd = new Date(windowStart.getTime() + rateLimit.windowMs);
 
-              if (repoName === 'accountUser') {
+            if (repoName === undefined) {
+                return res.status(400).json({ error: 'Repository name is required' });
+            }
+            
+            // defaultUser 리포지터리 고정하므로 타입을 지원함
+            if (repoName === 'defaultUser') {
                 const repo = req.kusto.getRepository(repoName);
-                
+
                 // 1. 현재 rate limit 상태 조회
                 const currentRateLimit = await repo.getRateLimit({
                     adminUuid: adminUUID,
@@ -93,7 +98,7 @@ export default () => {
                         blockUntil: new Date(Date.now() + rateLimit.windowMs),
                         requestCount: currentCount + 1
                     });
-                    
+
                     return res.status(429).json({ error: `${rateLimit.message} [1]` });
                 }
 
