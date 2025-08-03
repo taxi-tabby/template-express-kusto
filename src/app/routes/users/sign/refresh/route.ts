@@ -13,6 +13,7 @@ const router = new ExpressRouter();
  * JWT 토큰 갱신 요청입니다.
  */
 router
+.WITH('authJwtGuardCheck')
 .POST_VALIDATED(
     {
         body: {
