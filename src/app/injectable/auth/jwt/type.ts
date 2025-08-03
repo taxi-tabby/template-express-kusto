@@ -14,6 +14,7 @@ export interface TokenPayload {
     uuid: string;
     email: string;
     role?: string[];
+    jti?: string;
     iat?: number;
     exp?: number;
 }

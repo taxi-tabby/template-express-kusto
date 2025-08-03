@@ -1,5 +1,6 @@
 import * as jwt from 'jsonwebtoken';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { TokenPayload } from './type';
 
 interface JWTConfig {
@@ -51,9 +52,14 @@ export default class JWTService {
     /**
      * Access Token을 생성합니다
      */
-    generateAccessToken(payload: Omit<TokenPayload, 'iat' | 'exp'>): string {
+    generateAccessToken(payload: Omit<TokenPayload, 'iat' | 'exp'>, jti?: string): string {
         try {
-            return jwt.sign(payload, this.config.accessTokenSecret, {
+            const tokenPayload = {
+                ...payload,
+                jti: jti || this.generateJti()
+            };
+
+            return jwt.sign(tokenPayload, this.config.accessTokenSecret, {
                 expiresIn: this.config.accessTokenExpiry,
                 issuer: 'kusto-server',
                 audience: 'kusto-client'
@@ -66,9 +72,14 @@ export default class JWTService {
     /**
      * Refresh Token을 생성합니다
      */
-    generateRefreshToken(payload: Omit<TokenPayload, 'iat' | 'exp'>): string {
+    generateRefreshToken(payload: Omit<TokenPayload, 'iat' | 'exp'>, jti?: string): string {
         try {
-            return jwt.sign(payload, this.config.refreshTokenSecret, {
+            const tokenPayload = {
+                ...payload,
+                jti: jti || this.generateJti()
+            };
+
+            return jwt.sign(tokenPayload, this.config.refreshTokenSecret, {
                 expiresIn: this.config.refreshTokenExpiry,
                 issuer: 'kusto-server',
                 audience: 'kusto-client'
@@ -171,6 +182,49 @@ export default class JWTService {
         };
 
         return this.generateAccessToken(newTokenPayload);
+    }
+
+    // === JWT Utility Methods ===
+
+    /**
+     * 고유한 JWT ID (JTI)를 생성합니다
+     */
+    generateJti(): string {
+        return crypto.randomBytes(16).toString('hex');
+    }
+
+    /**
+     * 토큰을 해시화합니다 (저장용)
+     */
+    async hashToken(token: string): Promise<string> {
+        return crypto.createHash('sha256').update(token).digest('hex');
+    }
+
+    /**
+     * 디바이스 ID를 생성합니다
+     */
+    generateDeviceId(userAgent?: string, ipAddress?: string): string {
+        const data = `${userAgent || 'unknown'}_${ipAddress || 'unknown'}_${Date.now()}`;
+        return crypto.createHash('md5').update(data).digest('hex');
+    }
+
+    /**
+     * 토큰 패밀리 ID를 생성합니다
+     */
+    generateFamilyId(userUuid: string, deviceId: string): string {
+        return `${userUuid}_${deviceId}`;
+    }
+
+    /**
+     * JWT에서 JTI를 추출합니다
+     */
+    extractJtiFromToken(token: string): string | null {
+        try {
+            const decoded = jwt.decode(token) as any;
+            return decoded?.jti || null;
+        } catch {
+            return null;
+        }
     }
 }
 

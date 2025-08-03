@@ -1274,4 +1274,611 @@ export default class UserRepository extends BaseRepository<'default'> {
 
         return result.count;
     }
+
+    // ########################################
+    // JWT Session 관련 메서드들
+    // ########################################
+
+    /**
+     * 새로운 사용자 세션을 생성합니다
+     */
+    async createSession(data: {
+        userUuid: string;
+        jti: string;
+        refreshJti?: string;
+        familyId: string;
+        generation?: number;
+        deviceInfo?: string;
+        deviceId?: string;
+        ipAddress?: string;
+        location?: string;
+        loginMethod?: string;
+        accessTokenExpiresAt: Date;
+        refreshTokenExpiresAt?: Date;
+        expiresAt: Date;
+    }) {
+        const client = this.getUserDb();
+        
+        return client.userSession.create({
+            data: {
+                userUuid: data.userUuid,
+                jti: data.jti,
+                refreshJti: data.refreshJti,
+                familyId: data.familyId,
+                generation: data.generation || 1,
+                deviceInfo: data.deviceInfo,
+                deviceId: data.deviceId,
+                ipAddress: data.ipAddress,
+                location: data.location,
+                loginMethod: data.loginMethod as any,
+                accessTokenExpiresAt: data.accessTokenExpiresAt,
+                refreshTokenExpiresAt: data.refreshTokenExpiresAt,
+                expiresAt: data.expiresAt,
+                isActive: true,
+                trustScore: 1.0
+            },
+            select: {
+                id: true,
+                uuid: true,
+                jti: true,
+                refreshJti: true,
+                familyId: true,
+                generation: true,
+                createdAt: true
+            }
+        });
+    }
+
+    /**
+     * JTI로 세션을 조회합니다
+     */
+    async findSessionByJti(jti: string) {
+        const client = this.getUserDb();
+        
+        return client.userSession.findUnique({
+            where: { 
+                jti: jti,
+                deletedAt: null 
+            },
+            select: {
+                id: true,
+                uuid: true,
+                userUuid: true,
+                jti: true,
+                refreshJti: true,
+                familyId: true,
+                generation: true,
+                deviceId: true,
+                isActive: true,
+                isCompromised: true,
+                expiresAt: true,
+                accessTokenExpiresAt: true,
+                refreshTokenExpiresAt: true,
+                createdAt: true,
+                lastUsedAt: true
+            }
+        });
+    }
+
+    /**
+     * 사용자의 활성 세션들을 조회합니다
+     */
+    async findActiveSessionsByUser(userUuid: string) {
+        const client = this.getUserDb();
+        
+        return client.userSession.findMany({
+            where: {
+                userUuid: userUuid,
+                isActive: true,
+                expiresAt: { gt: new Date() },
+                deletedAt: null
+            },
+            select: {
+                uuid: true,
+                jti: true,
+                familyId: true,
+                deviceInfo: true,
+                deviceId: true,
+                ipAddress: true,
+                location: true,
+                loginMethod: true,
+                lastUsedAt: true,
+                createdAt: true
+            },
+            orderBy: { lastUsedAt: 'desc' }
+        });
+    }
+
+    /**
+     * 세션을 비활성화합니다 (로그아웃)
+     */
+    async deactivateSession(jti: string) {
+        const client = this.getUserDb();
+        
+        return client.userSession.update({
+            where: { jti: jti },
+            data: {
+                isActive: false,
+                deletedAt: new Date()
+            },
+            select: {
+                id: true,
+                uuid: true,
+                jti: true
+            }
+        });
+    }
+
+    /**
+     * 사용자의 모든 세션을 비활성화합니다
+     */
+    async deactivateAllUserSessions(userUuid: string) {
+        const client = this.getUserDb();
+        
+        return client.userSession.updateMany({
+            where: {
+                userUuid: userUuid,
+                isActive: true,
+                deletedAt: null
+            },
+            data: {
+                isActive: false,
+                deletedAt: new Date()
+            }
+        });
+    }
+
+    /**
+     * 특정 디바이스의 모든 세션을 비활성화합니다
+     */
+    async deactivateDeviceSessions(userUuid: string, deviceId: string) {
+        const client = this.getUserDb();
+        
+        return client.userSession.updateMany({
+            where: {
+                userUuid: userUuid,
+                deviceId: deviceId,
+                isActive: true,
+                deletedAt: null
+            },
+            data: {
+                isActive: false,
+                deletedAt: new Date()
+            }
+        });
+    }
+
+    /**
+     * 세션을 업데이트합니다 (마지막 사용 시간 등)
+     */
+    async updateSessionActivity(jti: string, ipAddress?: string) {
+        const client = this.getUserDb();
+        
+        return client.userSession.update({
+            where: { jti: jti },
+            data: {
+                lastUsedAt: new Date(),
+                ...(ipAddress && { ipAddress: ipAddress })
+            },
+            select: {
+                id: true,
+                lastUsedAt: true
+            }
+        });
+    }
+
+    // ########################################
+    // JWT Refresh Token 관련 메서드들
+    // ########################################
+
+    /**
+     * 새로운 리프레시 토큰을 생성합니다
+     */
+    async createRefreshToken(data: {
+        userUuid: string;
+        jti: string;
+        familyId: string;
+        generation: number;
+        tokenHash: string;
+        deviceInfo?: string;
+        deviceId?: string;
+        ipAddress?: string;
+        parentJti?: string;
+        expiresAt: Date;
+    }) {
+        const client = this.getUserDb();
+        
+        return client.userRefreshToken.create({
+            data: {
+                userUuid: data.userUuid,
+                jti: data.jti,
+                familyId: data.familyId,
+                generation: data.generation,
+                tokenHash: data.tokenHash,
+                deviceInfo: data.deviceInfo,
+                deviceId: data.deviceId,
+                ipAddress: data.ipAddress,
+                parentJti: data.parentJti,
+                expiresAt: data.expiresAt,
+                isRevoked: false,
+                isUsed: false,
+                trustScore: 1.0
+            },
+            select: {
+                id: true,
+                uuid: true,
+                jti: true,
+                familyId: true,
+                generation: true,
+                createdAt: true
+            }
+        });
+    }
+
+    /**
+     * JTI로 리프레시 토큰을 조회합니다
+     */
+    async findRefreshTokenByJti(jti: string) {
+        const client = this.getUserDb();
+        
+        return client.userRefreshToken.findUnique({
+            where: { 
+                jti: jti,
+                deletedAt: null 
+            },
+            select: {
+                id: true,
+                uuid: true,
+                userUuid: true,
+                jti: true,
+                familyId: true,
+                generation: true,
+                tokenHash: true,
+                deviceId: true,
+                isRevoked: true,
+                isUsed: true,
+                expiresAt: true,
+                parentJti: true,
+                createdAt: true
+            }
+        });
+    }
+
+    /**
+     * 토큰 해시로 리프레시 토큰을 조회합니다
+     */
+    async findRefreshTokenByHash(tokenHash: string) {
+        const client = this.getUserDb();
+        
+        return client.userRefreshToken.findUnique({
+            where: { 
+                tokenHash: tokenHash,
+                deletedAt: null 
+            },
+            select: {
+                id: true,
+                uuid: true,
+                userUuid: true,
+                jti: true,
+                familyId: true,
+                generation: true,
+                deviceId: true,
+                isRevoked: true,
+                isUsed: true,
+                expiresAt: true,
+                parentJti: true,
+                createdAt: true
+            }
+        });
+    }
+
+    /**
+     * 리프레시 토큰을 사용 완료로 표시합니다 (rotation시)
+     */
+    async markRefreshTokenAsUsed(jti: string) {
+        const client = this.getUserDb();
+        
+        return client.userRefreshToken.update({
+            where: { jti: jti },
+            data: {
+                isUsed: true,
+                usedAt: new Date()
+            },
+            select: {
+                id: true,
+                jti: true,
+                isUsed: true,
+                usedAt: true
+            }
+        });
+    }
+
+    /**
+     * 리프레시 토큰을 폐기합니다
+     */
+    async revokeRefreshToken(jti: string, reason?: string, revokedByUserUuid?: bigint) {
+        const client = this.getUserDb();
+        
+        return client.userRefreshToken.update({
+            where: { jti: jti },
+            data: {
+                isRevoked: true,
+                revokedAt: new Date(),
+                revokedByUserUuid: revokedByUserUuid
+            },
+            select: {
+                id: true,
+                jti: true,
+                isRevoked: true,
+                revokedAt: true
+            }
+        });
+    }
+
+    /**
+     * 토큰 패밀리의 모든 리프레시 토큰을 폐기합니다 (도난 감지시)
+     */
+    async revokeTokenFamily(familyId: string, reason?: string) {
+        const client = this.getUserDb();
+        
+        return client.userRefreshToken.updateMany({
+            where: {
+                familyId: familyId,
+                isRevoked: false,
+                deletedAt: null
+            },
+            data: {
+                isRevoked: true,
+                revokedAt: new Date()
+            }
+        });
+    }
+
+    /**
+     * 사용자의 모든 리프레시 토큰을 폐기합니다
+     */
+    async revokeAllUserRefreshTokens(userUuid: string) {
+        const client = this.getUserDb();
+        
+        return client.userRefreshToken.updateMany({
+            where: {
+                userUuid: userUuid,
+                isRevoked: false,
+                deletedAt: null
+            },
+            data: {
+                isRevoked: true,
+                revokedAt: new Date()
+            }
+        });
+    }
+
+    /**
+     * 토큰 패밀리의 활성 토큰 수를 확인합니다 (도난 감지용)
+     */
+    async countActiveTokensInFamily(familyId: string): Promise<number> {
+        const client = this.getUserDb();
+        
+        return client.userRefreshToken.count({
+            where: {
+                familyId: familyId,
+                isRevoked: false,
+                isUsed: false,
+                expiresAt: { gt: new Date() },
+                deletedAt: null
+            }
+        });
+    }
+
+    /**
+     * 사용자의 리프레시 토큰 개수를 확인합니다
+     */
+    async countUserRefreshTokens(userUuid: string): Promise<number> {
+        const client = this.getUserDb();
+        
+        return client.userRefreshToken.count({
+            where: {
+                userUuid: userUuid,
+                isRevoked: false,
+                expiresAt: { gt: new Date() },
+                deletedAt: null
+            }
+        });
+    }
+
+    /**
+     * 만료된 리프레시 토큰들을 정리합니다
+     */
+    async cleanupExpiredRefreshTokens(): Promise<number> {
+        const client = this.getUserDb();
+        
+        const result = await client.userRefreshToken.updateMany({
+            where: {
+                expiresAt: { lt: new Date() },
+                deletedAt: null
+            },
+            data: {
+                deletedAt: new Date()
+            }
+        });
+
+        return result.count;
+    }
+
+    // ########################################
+    // JWT Token Blacklist 관련 메서드들
+    // ########################################
+
+    /**
+     * 토큰을 블랙리스트에 추가합니다
+     */
+    async addToTokenBlacklist(data: {
+        userUuid?: string;
+        jti: string;
+        tokenType: 'ACCESS' | 'REFRESH' | 'RESET_PASSWORD' | 'EMAIL_VERIFICATION' | 'TWO_FACTOR';
+        reason: 'LOGOUT' | 'SECURITY_BREACH' | 'PASSWORD_CHANGE' | 'ADMIN_ACTION' | 'TOKEN_THEFT' | 'EXPIRED' | 'USER_REQUESTED';
+        expiresAt: Date;
+        ipAddress?: string;
+        userAgent?: string;
+        deviceInfo?: string;
+    }) {
+        const client = this.getUserDb();
+        
+        return client.userTokenBlacklist.create({
+            data: {
+                userUuid: data.userUuid,
+                jti: data.jti,
+                tokenType: data.tokenType as any,
+                reason: data.reason as any,
+                expiresAt: data.expiresAt,
+                ipAddress: data.ipAddress,
+                userAgent: data.userAgent,
+                deviceInfo: data.deviceInfo
+            },
+            select: {
+                id: true,
+                uuid: true,
+                jti: true,
+                tokenType: true,
+                reason: true,
+                createdAt: true
+            }
+        });
+    }
+
+    /**
+     * JTI가 블랙리스트에 있는지 확인합니다
+     */
+    async isTokenBlacklisted(jti: string): Promise<boolean> {
+        const client = this.getUserDb();
+        
+        const blacklistedToken = await client.userTokenBlacklist.findUnique({
+            where: { jti: jti },
+            select: { id: true, expiresAt: true }
+        });
+
+        if (!blacklistedToken) {
+            return false;
+        }
+
+        // 만료된 블랙리스트 항목이면 false 반환
+        return blacklistedToken.expiresAt > new Date();
+    }
+
+    /**
+     * 사용자의 모든 토큰을 블랙리스트에 추가합니다
+     */
+    async blacklistAllUserTokens(
+        userUuid: string, 
+        reason: 'LOGOUT' | 'SECURITY_BREACH' | 'PASSWORD_CHANGE' | 'ADMIN_ACTION' | 'TOKEN_THEFT' | 'EXPIRED' | 'USER_REQUESTED'
+    ) {
+        const client = this.getUserDb();
+        
+        // 활성 세션들의 JTI 조회
+        const activeSessions = await client.userSession.findMany({
+            where: {
+                userUuid: userUuid,
+                isActive: true,
+                expiresAt: { gt: new Date() },
+                deletedAt: null
+            },
+            select: {
+                jti: true,
+                refreshJti: true,
+                accessTokenExpiresAt: true,
+                refreshTokenExpiresAt: true
+            }
+        });
+
+        const blacklistPromises = [];
+
+        for (const session of activeSessions) {
+            // 액세스 토큰 블랙리스트 추가
+            blacklistPromises.push(
+                client.userTokenBlacklist.create({
+                    data: {
+                        userUuid: userUuid,
+                        jti: session.jti,
+                        tokenType: 'ACCESS',
+                        reason: reason as any,
+                        expiresAt: session.accessTokenExpiresAt
+                    }
+                })
+            );
+
+            // 리프레시 토큰 블랙리스트 추가 (있는 경우)
+            if (session.refreshJti && session.refreshTokenExpiresAt) {
+                blacklistPromises.push(
+                    client.userTokenBlacklist.create({
+                        data: {
+                            userUuid: userUuid,
+                            jti: session.refreshJti,
+                            tokenType: 'REFRESH',
+                            reason: reason as any,
+                            expiresAt: session.refreshTokenExpiresAt
+                        }
+                    })
+                );
+            }
+        }
+
+        await Promise.all(blacklistPromises);
+        return blacklistPromises.length;
+    }
+
+    /**
+     * 만료된 블랙리스트 항목들을 정리합니다
+     */
+    async cleanupExpiredBlacklist(): Promise<number> {
+        const client = this.getUserDb();
+        
+        const result = await client.userTokenBlacklist.deleteMany({
+            where: {
+                expiresAt: { lt: new Date() }
+            }
+        });
+
+        return result.count;
+    }
+
+    /**
+     * JWT 버전을 증가시켜 모든 토큰을 무효화합니다
+     */
+    async incrementJwtVersion(userUuid: string) {
+        const client = this.getUserDb();
+        
+        return client.user.update({
+            where: { 
+                uuid: userUuid,
+                deletedAt: null 
+            },
+            data: {
+                jwtVersion: { increment: 1 },
+                updatedAt: new Date()
+            },
+            select: {
+                id: true,
+                uuid: true,
+                jwtVersion: true,
+                updatedAt: true
+            }
+        });
+    }
+
+    /**
+     * 사용자의 현재 JWT 버전을 조회합니다
+     */
+    async getUserJwtVersion(userUuid: string): Promise<number | null> {
+        const client = this.getUserDb();
+        
+        const user = await client.user.findUnique({
+            where: { 
+                uuid: userUuid,
+                deletedAt: null 
+            },
+            select: { jwtVersion: true }
+        });
+
+        return user?.jwtVersion || null;
+    }
 }
