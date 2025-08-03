@@ -4,21 +4,21 @@
 /**
  * Import actual Prisma client types from each database
  */
+type DefaultClient = typeof import('@app/db/default/client')['PrismaClient'];
 type TemporaryClient = typeof import('@app/db/temporary/client')['PrismaClient'];
-type UserClient = typeof import('@app/db/user/client')['PrismaClient'];
 
 /**
  * Instantiated client types
  */
+type DefaultInstance = InstanceType<DefaultClient>;
 type TemporaryInstance = InstanceType<TemporaryClient>;
-type UserInstance = InstanceType<UserClient>;
 
 /**
  * Type mapping for database names to their corresponding Prisma client instances
  */
 export interface DatabaseClientMap {
+  default: DefaultInstance;
   temporary: TemporaryInstance;
-  user: UserInstance;
   [key: string]: any; // Allow for additional databases
 }
 
@@ -37,14 +37,14 @@ export type DatabaseName = keyof DatabaseClientMap;
 /**
  * Database names as Union type
  */
-export type DatabaseNamesUnion = 'temporary' | 'user';
+export type DatabaseNamesUnion = 'default' | 'temporary';
 
 /**
  * Method overloads for getWrap
  */
 export interface PrismaManagerWrapOverloads {
+  getWrap(databaseName: 'default'): DefaultInstance;
   getWrap(databaseName: 'temporary'): TemporaryInstance;
-  getWrap(databaseName: 'user'): UserInstance;
   getWrap<T extends string>(databaseName: T): DatabaseClientType<T>;
 }
 
@@ -52,8 +52,8 @@ export interface PrismaManagerWrapOverloads {
  * Method overloads for getClient
  */
 export interface PrismaManagerClientOverloads {
+  getClient(databaseName: 'default'): DefaultInstance;
   getClient(databaseName: 'temporary'): TemporaryInstance;
-  getClient(databaseName: 'user'): UserInstance;
   getClient<T = any>(databaseName: string): T;
 }
 
@@ -63,9 +63,9 @@ export interface PrismaManagerClientOverloads {
  */
 declare module '../prismaManager' {
   interface PrismaManager {
+  getWrap(databaseName: 'default'): DefaultInstance;
   getWrap(databaseName: 'temporary'): TemporaryInstance;
-  getWrap(databaseName: 'user'): UserInstance;
+  getClient(databaseName: 'default'): DefaultInstance;
   getClient(databaseName: 'temporary'): TemporaryInstance;
-  getClient(databaseName: 'user'): UserInstance;
   }
 }

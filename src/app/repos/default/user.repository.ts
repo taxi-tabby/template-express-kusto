@@ -21,42 +21,17 @@ import {
  * User repository for handling user-related database operations
  * Optimized for performance with minimal joins and efficient indexing
  */
-export default class UserRepository extends BaseRepository<'user'> {
+export default class UserRepository extends BaseRepository<'default'> {
 
 
-    protected getDatabaseName(): 'user' {
-        return 'user';
+    protected getDatabaseName(): 'default' {
+        return 'default';
     }
     
     private getUserDb() {
         return this.client;
     }
     
-
-
-
-    // 신경 쓰지마.
-    // prisma에서 transaction을 어떻게 관리해야할지 탐구하던 흔적인데. 나중에 prisma에 pull 관리가 가능하게 업데이트 되면 작업하려고 놔둔거야.
-    async TestUser(): Promise<string> {
-
-        const client = this.getUserDb();
-        await client.$queryRawUnsafe(`START TRANSACTION`);
-
-        const txid1 = await client.$queryRawUnsafe<{ txid_current: string }[]>(`SELECT txid_current();`);
-        console.log('TX ID after START:', txid1);
-
-        await client.$queryRawUnsafe(`UPDATE "User" SET email = 'aaa@example.com' WHERE id = 1`);
-
-        const txid2 = await client.$queryRawUnsafe<{ txid_current: string }[]>(`SELECT txid_current();`);
-        console.log('TX ID after UPDATE:', txid2);
-
-        await client.$queryRawUnsafe(`COMMIT`);
-        return "";
-    }
-
-
-
-
 
     // Core find methods (minimal data, no joins)
     async findById(id: bigint): Promise<UserBase | null> {

@@ -14,7 +14,7 @@ const router = new ExpressRouter();
  */
 router
 .WITH('authRateLimiterDefault', {
-    repositoryName: 'accountUser', 
+    repositoryName: 'defaultUser', 
     maxRequests: 3, 
     windowMs: 1*60*1000, 
     message: "로그인 요청이 너무 많습니다. 잠시 후 다시 시도해주세요."
@@ -41,7 +41,7 @@ router
     async (req, res, injected, repo, db) => {
     
         const jwt = injected.authJwtExport;                  
-        const userRepo = repo.getRepository('accountUser');   
+        const userRepo = repo.getRepository('defaultUser');   
         const data = req.validatedData;    
 
 
