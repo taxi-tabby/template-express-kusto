@@ -3,8 +3,8 @@ const router = new ExpressRouter();
 
 
 router
-.CRUD('default', 'userAuditLog', {
-    only: ['index', 'show']
+.CRUD('default', 'userSession', {
+    
 })
 
 export default router.build();

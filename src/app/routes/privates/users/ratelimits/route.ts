@@ -3,7 +3,7 @@ const router = new ExpressRouter();
 
 
 router
-.CRUD('default', 'userAuditLog', {
+.CRUD('default', 'userRateLimit', {
     only: ['index', 'show']
 })
 
