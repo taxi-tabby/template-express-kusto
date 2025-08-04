@@ -216,6 +216,16 @@ export async function seedFixedUsers() {
             update: {}
         });
         console.log(`✅ Fixed user created/updated: ${user.email}`);
+        
+        // 특정 사용자에게 역할 할당
+        if (userData.email === "admin@example.com") {
+            await assignRoleToUser(user.uuid, "admin");
+        } else if (userData.email === "test@asd.com") {
+            await assignRoleToUser(user.uuid, "admin");
+        } else {
+            // 나머지 고정 사용자들은 일반 사용자 역할
+            await assignRoleToUser(user.uuid, "user");
+        }
     }
 }
 
@@ -232,7 +242,7 @@ export async function seedRandomUsers(length: number = 100) {
     for (let i = 0; i < randomUsers.length; i += batchSize) {
         const batch = randomUsers.slice(i, i + batchSize);
         
-        await Promise.all(
+        const createdUsers = await Promise.all(
             batch.map(userData =>
                 prisma.user.upsert({
                     create: userData,
@@ -241,5 +251,57 @@ export async function seedRandomUsers(length: number = 100) {
                 })
             )
         );
+        
+        // 생성된 사용자들에게 역할 할당 (모두 일반 사용자 역할)
+        await Promise.all(
+            createdUsers.map(user => assignRoleToUser(user.uuid, "user"))
+        );
+    }
+}
+
+/**
+ * 사용자에게 역할을 할당하는 헬퍼 함수
+ * @param userUuid - 사용자 UUID
+ * @param roleName - 할당할 역할명
+ */
+async function assignRoleToUser(userUuid: string, roleName: string) {
+    try {
+        // 역할 조회
+        const role = await prisma.role.findUnique({
+            where: { name: roleName }
+        });
+        
+        if (!role) {
+            console.warn(`⚠️ Role '${roleName}' not found. Skipping role assignment.`);
+            return;
+        }
+        
+        // 이미 할당된 역할인지 확인
+        const existingUserRole = await prisma.userRole.findUnique({
+            where: {
+                userUuid_roleUuid: {
+                    userUuid: userUuid,
+                    roleUuid: role.uuid
+                }
+            }
+        });
+        
+        if (existingUserRole) {
+            console.log(`ℹ️ Role '${roleName}' already assigned to user ${userUuid}`);
+            return;
+        }
+        
+        // 역할 할당
+        await prisma.userRole.create({
+            data: {
+                userUuid: userUuid,
+                roleUuid: role.uuid,
+                assignedAt: new Date()
+            }
+        });
+        
+        console.log(`🔑 Role '${roleName}' assigned to user ${userUuid}`);
+    } catch (error) {
+        console.error(`❌ Failed to assign role '${roleName}' to user ${userUuid}:`, error);
     }
 }
