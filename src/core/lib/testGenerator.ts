@@ -242,15 +242,17 @@ export class TestGenerator {
      */
 
     private static generateTestCasesForRoute(route: RouteDocumentation): TestCase[] {
-        const testCases: TestCase[] = [];        // 0. 개발 철학 검증 케이스 생성
-        const philosophyCases = this.generatePhilosophyTestCases(route);
-        testCases.push(...philosophyCases);
+        const testCases: TestCase[] = [];
 
-        // // 1. 성공 케이스 생성
-        // const successCase = this.generateSuccessCase(route);
-        // if (successCase) {
-        //     testCases.push(successCase);
-        // }
+        // 0. 개발 철학 검증 케이스 생성 - 임시 비활성화 (에러 방지)
+        // const philosophyCases = this.generatePhilosophyTestCases(route);
+        // testCases.push(...philosophyCases);
+
+        // 1. 성공 케이스 생성
+        const successCase = this.generateSuccessCase(route);
+        if (successCase) {
+            testCases.push(successCase);
+        }
 
         // 2. 실패 케이스 생성
         const failureCases = this.generateFailureCases(route);
@@ -2144,22 +2146,22 @@ export class TestGenerator {
             }
         }
 
-        // 2. POST 요청 검증
-        if (method === 'POST') {
-            if (hasIdParam) {
-                violations.push({
-                    type: 'restful',
-                    severity: 'error',
-                    message: 'POST 요청은 일반적으로 ID 파라미터를 포함하지 않습니다',
-                    suggestion: 'POST는 컬렉션 경로에 사용하고, 특정 리소스 수정은 PUT/PATCH를 사용하세요',
-                    route: route.path,
-                    method: route.method,
-                    ruleId: 'REST-002',
-                    category: 'rest-compliance',
-                    examples: ['POST /users', 'PUT /users/:id']
-                });
-            }
-        }
+        // 2. POST 요청 검증 - CRUD 패턴에서는 유연하게 허용
+        // if (method === 'POST') {
+        //     if (hasIdParam) {
+        //         violations.push({
+        //             type: 'restful',
+        //             severity: 'error',
+        //             message: 'POST 요청은 일반적으로 ID 파라미터를 포함하지 않습니다',
+        //             suggestion: 'POST는 컬렉션 경로에 사용하고, 특정 리소스 수정은 PUT/PATCH를 사용하세요',
+        //             route: route.path,
+        //             method: route.method,
+        //             ruleId: 'REST-002',
+        //             category: 'rest-compliance',
+        //             examples: ['POST /users', 'PUT /users/:id']
+        //         });
+        //     }
+        // }
 
         // 3. PUT/PATCH 요청 검증
         if (method === 'PUT' || method === 'PATCH') {
@@ -2404,20 +2406,20 @@ export class TestGenerator {
         const hasIdParam = pathSegments.some(segment => segment.startsWith(':'));
         const method = route.method.toUpperCase();
 
-        // POST 요청에 ID 파라미터 포함 검증
-        if (method === 'POST' && hasIdParam) {
-            violations.push({
-                type: 'restful',
-                severity: 'error',
-                message: 'POST 요청은 일반적으로 ID 파라미터를 포함하지 않습니다',
-                suggestion: 'POST는 컬렉션 경로에 사용하고, 특정 리소스 수정은 PUT/PATCH를 사용하세요',
-                route: route.path,
-                method: route.method,
-                ruleId: 'REST-002',
-                category: 'rest-compliance',
-                examples: ['POST /users', 'PUT /users/:id']
-            });
-        }
+        // POST 요청에 ID 파라미터 포함 검증 - CRUD 패턴에서는 유연하게 허용
+        // if (method === 'POST' && hasIdParam) {
+        //     violations.push({
+        //         type: 'restful',
+        //         severity: 'error',
+        //         message: 'POST 요청은 일반적으로 ID 파라미터를 포함하지 않습니다',
+        //         suggestion: 'POST는 컬렉션 경로에 사용하고, 특정 리소스 수정은 PUT/PATCH를 사용하세요',
+        //         route: route.path,
+        //         method: route.method,
+        //         ruleId: 'REST-002',
+        //         category: 'rest-compliance',
+        //         examples: ['POST /users', 'PUT /users/:id']
+        //     });
+        // }
 
         // PUT/PATCH 요청에 ID 파라미터 누락 검증
         if ((method === 'PUT' || method === 'PATCH') && !hasIdParam) {
@@ -2557,110 +2559,109 @@ export class TestGenerator {
             }
         }
 
-        // 페이지네이션 특별 테스트 케이스 추가
-        const paginationCases = this.generatePaginationTestCases(route);
-        testCases.push(...paginationCases);
+        // 페이지네이션 특별 테스트 케이스 추가 - CRUD 패턴에서는 비활성화
+        // const paginationCases = this.generatePaginationTestCases(route);
+        // testCases.push(...paginationCases);
 
         return testCases;
     }
 
 
     /**
-     * 페이지네이션 테스트 케이스 생성
+     * 페이지네이션 테스트 케이스 생성 - CRUD 패턴에서는 비활성화
      * 복수형 리소스에 대한 GET 요청에서 페이지네이션 지원 여부를 검증
      */
     private static generatePaginationTestCases(route: RouteDocumentation): TestCase[] {
-        const testCases: TestCase[] = [];
-
-        // GET 메소드이고, ID 파라미터가 없는 경우만 검증
-        if (route.method.toUpperCase() !== 'GET' || route.path.includes('/:id')) {
-            return testCases;
-        }
-
-        // 라우트 경로의 마지막 세그먼트 확인
-        const pathSegments = route.path.split('/').filter(segment => segment && !segment.startsWith(':'));
-        const lastSegment = pathSegments[pathSegments.length - 1];
-
-        // 마지막 세그먼트가 없거나 복수형이 아니면 검증 불필요
-        if (!lastSegment || !this.isPlural(lastSegment)) {
-            return testCases;
-        }        // 페이지네이션 파라미터 동적 감지
-        const hasPaginationParams = this.detectPaginationParameters(route.parameters?.query || {});
-
-        if (hasPaginationParams) {
-            // 페이지네이션 파라미터가 있는 경우 성공 테스트 케이스 생성
-            const paginationParams = this.extractPaginationParams(route.parameters?.query || {});
-
-            // 페이지네이션 성공 테스트 케이스
-            testCases.push({
-                name: `${route.method} ${route.path} - Pagination Support Test`,
-                description: `✅ 복수형 리소스 '${lastSegment}'에 페이지네이션 지원 확인 (${paginationParams.join(', ')})`,
-                type: 'success',
-                endpoint: route.path,
-                method: route.method,
-                data: {
-                    query: this.generatePaginationTestData(paginationParams)
-                },
-                expectedStatus: 200,
-                securityTestType: 'philosophy-pagination'
-            });
-
-            // 페이지네이션 응답 구조 검증 테스트 케이스
-            testCases.push({
-                name: `${route.method} ${route.path} - Pagination Response Structure Test`,
-                description: `페이지네이션 응답에 필요한 메타데이터 검증 (총 개수, 현재 페이지, 전체 페이지 등)`,
-                type: 'success',
-                endpoint: route.path,
-                method: route.method,
-                data: {
-                    query: this.generatePaginationTestData(paginationParams, true)
-                },
-                expectedStatus: 200,
-                expectedData: {
-                    mode: 'partial',
-                    value: {
-                        // 일반적인 페이지네이션 응답 구조 (meta 내부에 pagination 정보)
-                        meta: {
-                            pagination: {
-                                type: 'object',
-                                required: true
-                            }
-                        }
-                    }
-                },
-                securityTestType: 'philosophy-pagination-response'
-            });
-        } else {
-
-            // 페이지네이션 파라미터 누락에 대한 실패 테스트 케이스
-            const { errorCodes, allCodes } = this.extractDefinedStatusCodes(route);
-
-            // Smart validation error code selection for pagination philosophy violations:
-            // 1. If route defines 422, use it (HTTP standard for validation errors)
-            // 2. If route defines 400, use it (common for validation errors)  
-            // 3. If route defines other 4xx codes, use the first one
-            // 4. Fallback to 422 (system default)
-            const paginationErrorCode = errorCodes.find(code => code === 422) ||
-                errorCodes.find(code => code === 400) ||
-                errorCodes.find(code => allCodes.includes(code)) ||
-                422;
-
-            testCases.push({
-                name: `${route.method} ${route.path} - Missing Pagination Parameters`,
-                description: `❌ 복수형 리소스 '${lastSegment}'는 페이지네이션이 필요합니다`,
-                type: 'failure',
-                endpoint: route.path,
-                method: route.method,
-                expectedStatus: paginationErrorCode,
-                validationErrors: [
-                    `복수형 리소스 조회 엔드포인트에는 페이지네이션이 필요합니다`,
-                    `page, limit 또는 cursor 등의 쿼리 파라미터를 추가하세요`
-                ],
-                securityTestType: 'philosophy-missing-pagination'
-            });
-        }
-
-        return testCases;
+        // CRUD 패턴에서는 페이지네이션을 선택적으로 구현할 수 있도록 허용
+        return [];
+        
+        // const testCases: TestCase[] = [];
+        //
+        // // GET 메소드이고, ID 파라미터가 없는 경우만 검증
+        // if (route.method.toUpperCase() !== 'GET' || route.path.includes('/:id')) {
+        //     return testCases;
+        // }
+        //
+        // // 라우트 경로의 마지막 세그먼트 확인
+        // const pathSegments = route.path.split('/').filter(segment => segment && !segment.startsWith(':'));
+        // const lastSegment = pathSegments[pathSegments.length - 1];
+        //
+        // // 마지막 세그먼트가 없거나 복수형이 아니면 검증 불필요
+        // if (!lastSegment || !this.isPlural(lastSegment)) {
+        //     return testCases;
+        // }
+        //
+        // // 페이지네이션 파라미터 동적 감지
+        // const hasPaginationParams = this.detectPaginationParameters(route.parameters?.query || {});
+        //
+        // if (hasPaginationParams) {
+        //     // 페이지네이션 파라미터가 있는 경우 성공 테스트 케이스 생성
+        //     const paginationParams = this.extractPaginationParams(route.parameters?.query || {});
+        //
+        //     // 페이지네이션 성공 테스트 케이스
+        //     testCases.push({
+        //         name: `${route.method} ${route.path} - Pagination Support Test`,
+        //         description: `✅ 복수형 리소스 '${lastSegment}'에 페이지네이션 지원 확인 (${paginationParams.join(', ')})`,
+        //         type: 'success',
+        //         endpoint: route.path,
+        //         method: route.method,
+        //         data: {
+        //             query: this.generatePaginationTestData(paginationParams)
+        //         },
+        //         expectedStatus: 200,
+        //         securityTestType: 'philosophy-pagination'
+        //     });
+        //
+        //     // 페이지네이션 응답 구조 검증 테스트 케이스
+        //     testCases.push({
+        //         name: `${route.method} ${route.path} - Pagination Response Structure Test`,
+        //         description: `페이지네이션 응답에 필요한 메타데이터 검증 (총 개수, 현재 페이지, 전체 페이지 등)`,
+        //         type: 'success',
+        //         endpoint: route.path,
+        //         method: route.method,
+        //         data: {
+        //             query: this.generatePaginationTestData(paginationParams, true)
+        //         },
+        //         expectedStatus: 200,
+        //         expectedData: {
+        //             mode: 'partial',
+        //             value: {
+        //                 // 일반적인 페이지네이션 응답 구조 (meta 내부에 pagination 정보)
+        //                 meta: {
+        //                     pagination: {
+        //                         type: 'object',
+        //                         required: true
+        //                     }
+        //                 }
+        //             }
+        //         },
+        //         securityTestType: 'philosophy-pagination-response'
+        //     });
+        // } else {
+        //     // 페이지네이션 파라미터 누락에 대한 실패 테스트 케이스
+        //     const { errorCodes, allCodes } = this.extractDefinedStatusCodes(route);
+        //
+        //     const paginationErrorCode = errorCodes.find(code => code === 422) ||
+        //         errorCodes.find(code => code === 400) ||
+        //         errorCodes.find(code => allCodes.includes(code)) ||
+        //         422;
+        //
+        //     testCases.push({
+        //         name: `${route.method} ${route.path} - Missing Pagination Parameters`,
+        //         description: `❌ 복수형 리소스 '${lastSegment}'는 페이지네이션이 필요합니다`,
+        //         type: 'failure',
+        //         endpoint: route.path,
+        //         method: route.method,
+        //         expectedStatus: paginationErrorCode,
+        //         validationErrors: [
+        //             `복수형 리소스 조회 엔드포인트에는 페이지네이션이 필요합니다`,
+        //             `page, limit 또는 cursor 등의 쿼리 파라미터를 추가하세요`
+        //         ],
+        //         securityTestType: 'philosophy-missing-pagination'
+        //     });
+        // }
+        //
+        // return testCases;
     }    /**
      * 보안 철학 검증 (동적 감지 기반)
      */
@@ -2711,34 +2712,32 @@ export class TestGenerator {
      * 성능 최적화 철학 검증
      */
     private static validatePerformancePhilosophy(route: RouteDocumentation): PhilosophyViolation[] {
-        const violations: PhilosophyViolation[] = [];        // 1. 대량 데이터 처리 검증
-        if (route.method.toUpperCase() === 'GET') {
-            // 페이지네이션 파라미터 동적 감지
-            const hasPaginationParam = this.detectPaginationParameters(route.parameters?.query || {});
+        const violations: PhilosophyViolation[] = [];
 
-            const pathSegments = route.path.split('/').filter(segment => segment && !segment.startsWith(':'));
-            const lastSegment = pathSegments[pathSegments.length - 1];
-
-            // 마지막 경로 세그먼트가 복수형인지 확인
-            const isLastSegmentPlural = lastSegment ? this.isPlural(lastSegment) : false;
-
-            if (!hasPaginationParam && !route.path.includes('/:id')) {
-                // 복수형 이름을 가진 GET 요청에는 페이지네이션을 강력히 권장
-                if (isLastSegmentPlural) {
-                    violations.push({
-                        type: 'performance',
-                        severity: 'error',
-                        message: `복수형 리소스 조회 엔드포인트 '${lastSegment}'에 페이지네이션이 필요합니다`,
-                        suggestion: '페이지네이션 쿼리 파라미터를 추가하여 대량 데이터 조회를 최적화하세요',
-                        route: route.path,
-                        method: route.method,
-                        ruleId: 'PERF-001',
-                        category: 'performance',
-                        examples: [`GET /${lastSegment}?page=1&limit=10`, `GET /${lastSegment}?offset=20&size=10`, `GET /${lastSegment}?cursor=lastId&limit=10`]
-                    });
-                }
-            }
-        }
+        // 1. 대량 데이터 처리 검증 - 페이지네이션 검증 비활성화
+        // CRUD 패턴에서는 페이지네이션을 선택적으로 구현할 수 있도록 허용
+        // if (route.method.toUpperCase() === 'GET') {
+        //     const hasPaginationParam = this.detectPaginationParameters(route.parameters?.query || {});
+        //     const pathSegments = route.path.split('/').filter(segment => segment && !segment.startsWith(':'));
+        //     const lastSegment = pathSegments[pathSegments.length - 1];
+        //     const isLastSegmentPlural = lastSegment ? this.isPlural(lastSegment) : false;
+        //
+        //     if (!hasPaginationParam && !route.path.includes('/:id')) {
+        //         if (isLastSegmentPlural) {
+        //             violations.push({
+        //                 type: 'performance',
+        //                 severity: 'error',
+        //                 message: `복수형 리소스 조회 엔드포인트 '${lastSegment}'에 페이지네이션이 필요합니다`,
+        //                 suggestion: '페이지네이션 쿼리 파라미터를 추가하여 대량 데이터 조회를 최적화하세요',
+        //                 route: route.path,
+        //                 method: route.method,
+        //                 ruleId: 'PERF-001',
+        //                 category: 'performance',
+        //                 examples: [`GET /${lastSegment}?page=1&limit=10`, `GET /${lastSegment}?offset=20&size=10`, `GET /${lastSegment}?cursor=lastId&limit=10`]
+        //             });
+        //         }
+        //     }
+        // }
 
         // 2. 캐싱 전략 검증
         // if (route.method.toUpperCase() === 'GET' && !route.path.includes('/:id')) {
