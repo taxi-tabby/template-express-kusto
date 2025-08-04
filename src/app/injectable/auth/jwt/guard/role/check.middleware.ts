@@ -51,7 +51,7 @@ export default () => {
 
                 if (!hasRequiredPermission) {
                     return res.status(403).json({
-                        error: `Access denied. Required permissions: ${permissions.permissionName.join(', ')}`
+                        error: `Permission denied`
                     });
                 }
             }
