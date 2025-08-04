@@ -10,7 +10,8 @@ router
 })
 
 
-router.NOTFOUND((req, res, injected, repo, db)=>{
+router
+.NOTFOUND((req, res, injected, repo, db)=>{
     res.status(404).send("Not found");
 })
 
