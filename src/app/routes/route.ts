@@ -1,7 +1,5 @@
 import { ExpressRouter } from '@lib/expressRouter'
-
 const router = new ExpressRouter();
-
 
 
 router
@@ -9,10 +7,10 @@ router
     return res.render('index', { 
         CONST_VERSION_NAME: `1.0.0-kusto`,
     });
-});
+})
 
 
-router.NOTFOUND((req, res)=>{
+router.NOTFOUND((req, res, injected, repo, db)=>{
     res.status(404).send("Not found");
 })
 
