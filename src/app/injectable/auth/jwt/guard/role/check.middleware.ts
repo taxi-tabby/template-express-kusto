@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { authenticate } from '../check.middleware'
-import UserRepository from '../../../../../repos/default/user.repository';
 
 export default () => {
 
