@@ -1882,4 +1882,552 @@ export default class UserRepository extends BaseRepository<'default'> {
 
         return user?.jwtVersion || null;
     }
+
+    // ########################################
+    // Permission 권한 체크 관련 메서드들
+    // ########################################
+
+    /**
+     * 사용자가 특정 권한을 가지고 있는지 확인합니다 (역할 + 개별 권한 모두 체크)
+     */
+    async hasPermission(userUuid: string, resource: string, action: string): Promise<boolean> {
+        const client = this.getUserDb();
+        
+        // 1. 역할을 통한 권한 체크
+        const rolePermission = await client.user.findFirst({
+            where: {
+                uuid: userUuid,
+                deletedAt: null,
+                isActive: true,
+                roles: {
+                    some: {
+                        deletedAt: null,
+                        role: {
+                            deletedAt: null,
+                            isActive: true,
+                            permissions: {
+                                some: {
+                                    deletedAt: null,
+                                    permission: {
+                                        resource: resource,
+                                        action: action,
+                                        deletedAt: null
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            select: { id: true }
+        });
+
+        if (rolePermission) {
+            return true;
+        }
+
+        // 2. 개별 권한 체크
+        const userPermission = await client.user.findFirst({
+            where: {
+                uuid: userUuid,
+                deletedAt: null,
+                isActive: true,
+                permissions: {
+                    some: {
+                        deletedAt: null,
+                        permission: {
+                            resource: resource,
+                            action: action,
+                            deletedAt: null
+                        },
+                        // 만료되지 않은 권한만 체크
+                        OR: [
+                            { expiresAt: null },
+                            { expiresAt: { gt: new Date() } }
+                        ]
+                    }
+                }
+            },
+            select: { id: true }
+        });
+
+        return !!userPermission;
+    }
+
+    /**
+     * 사용자가 특정 권한을 가지고 있는지 권한명으로 확인합니다
+     */
+    async hasPermissionByName(userUuid: string, permissionName: string): Promise<boolean> {
+        const client = this.getUserDb();
+        
+        // 1. 역할을 통한 권한 체크
+        const rolePermission = await client.user.findFirst({
+            where: {
+                uuid: userUuid,
+                deletedAt: null,
+                isActive: true,
+                roles: {
+                    some: {
+                        deletedAt: null,
+                        role: {
+                            deletedAt: null,
+                            isActive: true,
+                            permissions: {
+                                some: {
+                                    deletedAt: null,
+                                    permission: {
+                                        name: permissionName,
+                                        deletedAt: null
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            select: { id: true }
+        });
+
+        if (rolePermission) {
+            return true;
+        }
+
+        // 2. 개별 권한 체크
+        const userPermission = await client.user.findFirst({
+            where: {
+                uuid: userUuid,
+                deletedAt: null,
+                isActive: true,
+                permissions: {
+                    some: {
+                        deletedAt: null,
+                        permission: {
+                            name: permissionName,
+                            deletedAt: null
+                        },
+                        // 만료되지 않은 권한만 체크
+                        OR: [
+                            { expiresAt: null },
+                            { expiresAt: { gt: new Date() } }
+                        ]
+                    }
+                }
+            },
+            select: { id: true }
+        });
+
+        return !!userPermission;
+    }
+
+    /**
+     * 사용자가 특정 역할을 가지고 있는지 확인합니다
+     */
+    async hasRole(userUuid: string, roleName: string): Promise<boolean> {
+        const client = this.getUserDb();
+        
+        const userRole = await client.user.findFirst({
+            where: {
+                uuid: userUuid,
+                deletedAt: null,
+                isActive: true,
+                roles: {
+                    some: {
+                        deletedAt: null,
+                        role: {
+                            name: roleName,
+                            deletedAt: null,
+                            isActive: true
+                        },
+                        // 만료되지 않은 역할만 체크
+                        OR: [
+                            { expiresAt: null },
+                            { expiresAt: { gt: new Date() } }
+                        ]
+                    }
+                }
+            },
+            select: { id: true }
+        });
+
+        return !!userRole;
+    }
+
+    /**
+     * 사용자의 모든 권한을 조회합니다 (역할 + 개별 권한 통합)
+     */
+    async getUserPermissions(userUuid: string): Promise<{
+        name: string;
+        resource: string;
+        action: string;
+        description?: string;
+        source: 'role' | 'direct';
+        roleName?: string;
+        expiresAt?: Date;
+    }[]> {
+        const client = this.getUserDb();
+        
+        const user = await client.user.findUnique({
+            where: {
+                uuid: userUuid,
+                deletedAt: null,
+                isActive: true
+            },
+            include: {
+                // 역할을 통한 권한
+                roles: {
+                    where: {
+                        deletedAt: null,
+                        OR: [
+                            { expiresAt: null },
+                            { expiresAt: { gt: new Date() } }
+                        ]
+                    },
+                    include: {
+                        role: {
+                            include: {
+                                permissions: {
+                                    where: { deletedAt: null },
+                                    include: {
+                                        permission: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                // 직접 할당된 권한
+                permissions: {
+                    where: {
+                        deletedAt: null,
+                        OR: [
+                            { expiresAt: null },
+                            { expiresAt: { gt: new Date() } }
+                        ]
+                    },
+                    include: {
+                        permission: true
+                    }
+                }
+            }
+        });
+
+        if (!user) {
+            return [];
+        }
+
+        const permissions: any[] = [];
+
+        // 역할을 통한 권한 추가
+        for (const userRole of user.roles) {
+            if (userRole.role && userRole.role.deletedAt === null && userRole.role.isActive) {
+                for (const rolePermission of userRole.role.permissions) {
+                    if (rolePermission.permission.deletedAt === null) {
+                        permissions.push({
+                            name: rolePermission.permission.name,
+                            resource: rolePermission.permission.resource,
+                            action: rolePermission.permission.action,
+                            description: rolePermission.permission.description,
+                            source: 'role',
+                            roleName: userRole.role.name,
+                            expiresAt: userRole.expiresAt || undefined
+                        });
+                    }
+                }
+            }
+        }
+
+        // 직접 할당된 권한 추가
+        for (const userPermission of user.permissions) {
+            if (userPermission.permission.deletedAt === null) {
+                permissions.push({
+                    name: userPermission.permission.name,
+                    resource: userPermission.permission.resource,
+                    action: userPermission.permission.action,
+                    description: userPermission.permission.description,
+                    source: 'direct',
+                    expiresAt: userPermission.expiresAt || undefined
+                });
+            }
+        }
+
+        // 중복 제거 (같은 권한이 역할과 직접 할당으로 중복될 수 있음)
+        const uniquePermissions = permissions.reduce((acc, current) => {
+            const exists = acc.find((p: any) => p.name === current.name);
+            if (!exists) {
+                acc.push(current);
+            }
+            return acc;
+        }, []);
+
+        return uniquePermissions;
+    }
+
+    /**
+     * 사용자의 모든 역할을 조회합니다
+     */
+    async getUserRoles(userUuid: string): Promise<{
+        name: string;
+        description?: string;
+        isSystem: boolean;
+        assignedAt: Date;
+        expiresAt?: Date;
+    }[]> {
+        const client = this.getUserDb();
+        
+        const userRoles = await client.userRole.findMany({
+            where: {
+                userUuid: userUuid,
+                deletedAt: null,
+                OR: [
+                    { expiresAt: null },
+                    { expiresAt: { gt: new Date() } }
+                ]
+            },
+            include: {
+                role: true
+            },
+            orderBy: { assignedAt: 'desc' }
+        });
+
+        return userRoles
+            .filter(ur => ur.role && ur.role.deletedAt === null && ur.role.isActive)
+            .map(ur => ({
+                name: ur.role!.name,
+                description: ur.role!.description || undefined,
+                isSystem: ur.role!.isSystem,
+                assignedAt: ur.assignedAt,
+                expiresAt: ur.expiresAt || undefined
+            }));
+    }
+
+    /**
+     * 사용자에게 역할을 할당합니다
+     */
+    async assignRole(userUuid: string, roleName: string, expiresAt?: Date): Promise<void> {
+        const client = this.getUserDb();
+        
+        // 역할 존재 여부 확인
+        const role = await client.role.findFirst({
+            where: {
+                name: roleName,
+                deletedAt: null,
+                isActive: true
+            }
+        });
+
+        if (!role) {
+            throw new Error(`Role '${roleName}' not found or inactive`);
+        }
+
+        // 이미 할당된 역할인지 확인
+        const existingRole = await client.userRole.findFirst({
+            where: {
+                userUuid: userUuid,
+                roleUuid: role.uuid,
+                deletedAt: null
+            }
+        });
+
+        if (existingRole) {
+            // 기존 역할의 만료시간 업데이트
+            await client.userRole.update({
+                where: { id: existingRole.id },
+                data: { expiresAt: expiresAt }
+            });
+        } else {
+            // 새로운 역할 할당
+            await client.userRole.create({
+                data: {
+                    userUuid: userUuid,
+                    roleUuid: role.uuid,
+                    expiresAt: expiresAt
+                }
+            });
+        }
+    }
+
+    /**
+     * 사용자에게 개별 권한을 할당합니다
+     */
+    async assignPermission(userUuid: string, permissionName: string, expiresAt?: Date): Promise<void> {
+        const client = this.getUserDb();
+        
+        // 권한 존재 여부 확인
+        const permission = await client.permission.findFirst({
+            where: {
+                name: permissionName,
+                deletedAt: null
+            }
+        });
+
+        if (!permission) {
+            throw new Error(`Permission '${permissionName}' not found`);
+        }
+
+        // 이미 할당된 권한인지 확인
+        const existingPermission = await client.userPermission.findFirst({
+            where: {
+                userUuid: userUuid,
+                permissionUuid: permission.uuid,
+                deletedAt: null
+            }
+        });
+
+        if (existingPermission) {
+            // 기존 권한의 만료시간 업데이트
+            await client.userPermission.update({
+                where: { id: existingPermission.id },
+                data: { expiresAt: expiresAt }
+            });
+        } else {
+            // 새로운 권한 할당
+            await client.userPermission.create({
+                data: {
+                    userUuid: userUuid,
+                    permissionUuid: permission.uuid,
+                    expiresAt: expiresAt
+                }
+            });
+        }
+    }
+
+    /**
+     * 사용자로부터 역할을 제거합니다
+     */
+    async removeRole(userUuid: string, roleName: string): Promise<void> {
+        const client = this.getUserDb();
+        
+        // 역할 존재 여부 확인
+        const role = await client.role.findFirst({
+            where: {
+                name: roleName,
+                deletedAt: null
+            }
+        });
+
+        if (!role) {
+            throw new Error(`Role '${roleName}' not found`);
+        }
+
+        // 역할 제거 (소프트 삭제)
+        await client.userRole.updateMany({
+            where: {
+                userUuid: userUuid,
+                roleUuid: role.uuid,
+                deletedAt: null
+            },
+            data: {
+                deletedAt: new Date()
+            }
+        });
+    }
+
+    /**
+     * 사용자로부터 개별 권한을 제거합니다
+     */
+    async removePermission(userUuid: string, permissionName: string): Promise<void> {
+        const client = this.getUserDb();
+        
+        // 권한 존재 여부 확인
+        const permission = await client.permission.findFirst({
+            where: {
+                name: permissionName,
+                deletedAt: null
+            }
+        });
+
+        if (!permission) {
+            throw new Error(`Permission '${permissionName}' not found`);
+        }
+
+        // 권한 제거 (소프트 삭제)
+        await client.userPermission.updateMany({
+            where: {
+                userUuid: userUuid,
+                permissionUuid: permission.uuid,
+                deletedAt: null
+            },
+            data: {
+                deletedAt: new Date()
+            }
+        });
+    }
+
+    /**
+     * 여러 권한을 한번에 체크합니다 (AND 조건)
+     */
+    async hasAllPermissions(userUuid: string, permissions: { resource: string; action: string }[]): Promise<boolean> {
+        for (const permission of permissions) {
+            const hasPermission = await this.hasPermission(userUuid, permission.resource, permission.action);
+            if (!hasPermission) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 여러 권한 중 하나라도 가지고 있는지 체크합니다 (OR 조건)
+     */
+    async hasAnyPermission(userUuid: string, permissions: { resource: string; action: string }[]): Promise<boolean> {
+        for (const permission of permissions) {
+            const hasPermission = await this.hasPermission(userUuid, permission.resource, permission.action);
+            if (hasPermission) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 사용자의 권한 캐시를 무효화합니다 (권한 변경 후 호출)
+     */
+    async invalidateUserPermissionCache(userUuid: string): Promise<void> {
+        // 여기에 캐시 무효화 로직을 구현할 수 있습니다
+        // 예: Redis 캐시 삭제, 메모리 캐시 클리어 등
+        // 현재는 빈 메서드로 두고 필요시 구현
+    }
+
+    /**
+     * 만료된 사용자 역할들을 정리합니다
+     */
+    async cleanupExpiredUserRoles(): Promise<number> {
+        const client = this.getUserDb();
+        const now = new Date();
+        
+        const result = await client.userRole.updateMany({
+            where: {
+                expiresAt: { lt: now },
+                deletedAt: null
+            },
+            data: {
+                deletedAt: new Date()
+            }
+        });
+
+        return result.count;
+    }
+
+    /**
+     * 만료된 사용자 권한들을 정리합니다
+     */
+    async cleanupExpiredUserPermissions(): Promise<number> {
+        const client = this.getUserDb();
+        const now = new Date();
+        
+        const result = await client.userPermission.updateMany({
+            where: {
+                expiresAt: { lt: now },
+                deletedAt: null
+            },
+            data: {
+                deletedAt: new Date()
+            }
+        });
+
+        return result.count;
+    }
+
+
+
 }
