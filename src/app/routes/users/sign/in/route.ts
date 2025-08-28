@@ -23,16 +23,19 @@ router
 .POST_VALIDATED(
     {
         body: {
-            email: { type: 'email', required: true },
+            id: { type: 'string', required: true },
             password: { type: 'string', required: true }
         }
     },
     {
         200: {
             success: {type: 'boolean', required: true},
-            accessToken: { type: 'string', required: true },
-            refreshToken: { type: 'string', required: true },
-            uuid: { type: 'string', required: false },
+            attributes: { type: 'object', required: true, properties: {
+                accessToken: { type: 'string', required: true },
+                refreshToken: { type: 'string', required: true },
+            }
+        },
+            id: { type: 'string', required: false },
         },
         400: {
             error: { type: 'string', required: true }
@@ -54,7 +57,7 @@ router
 
         try {
             // 1. 사용자 조회 및 기본 검증
-            _userInfo = await userRepo.findByEmail(data.body.email);
+            _userInfo = await userRepo.findByEmail(data.body.id);
 
             if (!_userInfo) {
                 // 로그인 실패 로그 (사용자 없음)
@@ -63,7 +66,7 @@ router
                     action: 'LOGIN',
                     resource: 'authentication',
                     newValues: { 
-                        email: data.body.email,
+                        email: data.body.id,
                         result: 'failed',
                         reason: 'user_not_found'
                     },
@@ -84,7 +87,7 @@ router
                     action: 'LOGIN',
                     resource: 'authentication',
                     newValues: { 
-                        email: data?.body.email,
+                        email: data?.body.id,
                         result: 'failed',
                         reason: 'account_locked'
                     },
@@ -108,7 +111,7 @@ router
                     action: 'LOGIN',
                     resource: 'authentication',
                     newValues: { 
-                        email: data?.body.email,
+                        email: data?.body.id,
                         result: 'failed',
                         reason: 'invalid_password'
                     },
@@ -129,7 +132,7 @@ router
                     action: 'LOGIN',
                     resource: 'authentication',
                     newValues: { 
-                        email: data?.body.email,
+                        email: data?.body.id,
                         result: 'failed',
                         reason: 'account_inactive'
                     },
@@ -149,7 +152,7 @@ router
                     action: 'LOGIN',
                     resource: 'authentication',
                     newValues: { 
-                        email: data?.body.email,
+                        email: data?.body.id,
                         result: 'failed',
                         reason: 'account_suspended'
                     },
@@ -235,7 +238,7 @@ router
                     action: 'LOGIN',
                     resource: 'authentication',
                     newValues: { 
-                        email: data?.body.email,
+                        email: data?.body.id,
                         result: 'success',
                         deviceId: deviceId,
                         familyId: familyId,
@@ -251,9 +254,11 @@ router
 
             return {
                 success: true,
-                accessToken,
-                refreshToken,
-                uuid: payload.uuid
+                id: payload.uuid,
+                attributes: {
+                    accessToken,
+                    refreshToken,
+                }
             }
 
         } catch (error) {
@@ -266,7 +271,7 @@ router
                 action: 'LOGIN',
                 resource: 'authentication',
                 newValues: { 
-                    email: data?.body.email,
+                    email: data?.body.id,
                     result: 'error',
                     error: error instanceof Error ? error.message : 'Unknown error'
                 },
