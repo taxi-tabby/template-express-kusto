@@ -7,7 +7,8 @@ const router = new ExpressRouter();
  */
 router
 .CRUD('default', 'user', {
-
+    primaryKey: 'id',
+    softDelete: {enabled: true, field: 'deletedAt'},
 })
 
 export default router.build();
