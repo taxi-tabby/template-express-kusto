@@ -30,12 +30,15 @@ router
     {
         200: {
             success: {type: 'boolean', required: true},
+            id: { type: 'string', required: true },
             attributes: { type: 'object', required: true, properties: {
                 accessToken: { type: 'string', required: true },
                 refreshToken: { type: 'string', required: true },
+                accessTokenExpiresAt: { type: 'string', required: true },
+                refreshTokenExpiresAt: { type: 'string', required: true },
             }
         },
-            id: { type: 'string', required: false },
+
         },
         400: {
             error: { type: 'string', required: true }
@@ -258,6 +261,8 @@ router
                 attributes: {
                     accessToken,
                     refreshToken,
+                    accessTokenExpiresAt: accessTokenExpiration.toISOString(),
+                    refreshTokenExpiresAt: refreshTokenExpiration.toISOString(),
                 }
             }
 
