@@ -19,6 +19,7 @@ enum LoginMethod {
   OAUTH
   SSO
   BIOMETRIC
+  TOKEN_REFRESH
 }
 
 // 사용자 상태 관련 Enum
@@ -84,6 +85,7 @@ enum AuditAction {
   ACCOUNT_DELETED
   ACCOUNT_SUSPENDED
   ADMIN_ACTION
+  TOKEN_REFRESH
 }
 
 

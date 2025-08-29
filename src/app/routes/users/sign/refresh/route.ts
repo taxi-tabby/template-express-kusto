@@ -175,22 +175,24 @@ router
                 }
 
                 // 8. 기존 토큰들 폐기 및 새 토큰 저장
-                await Promise.all([
-                    // 기존 Access Token 블랙리스트 추가 (현재 세션의)
-                    userRepo.addToTokenBlacklist({
+                // 기존 Refresh Token 폐기
+                await userRepo.revokeRefreshToken(refreshJti, 'EXPIRED');
+
+                // parentJti가 있을 때만 기존 Access Token을 블랙리스트에 추가
+                if (refreshTokenRecord.parentJti) {
+                    await userRepo.addToTokenBlacklist({
                         userUuid: user.uuid,
-                        jti: refreshTokenRecord.parentJti || '', // sessionJti 대신 parentJti 사용
+                        jti: refreshTokenRecord.parentJti,
                         tokenType: 'ACCESS',
-                        reason: 'EXPIRED', // TOKEN_REFRESH 대신 허용되는 값 사용
+                        reason: 'EXPIRED',
                         expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15분
                         ipAddress: req.ip,
                         userAgent: req.get('User-Agent')
-                    }),
+                    });
+                }
 
-                    // 기존 Refresh Token 폐기
-                    userRepo.revokeRefreshToken(refreshJti, 'EXPIRED'), // TOKEN_REFRESH 대신 허용되는 값 사용
-
-                    // 새로운 세션 생성
+                // 새로운 세션 및 토큰 생성
+                await Promise.all([
                     userRepo.createSession({
                         userUuid: user.uuid,
                         jti: newAccessJti,
@@ -206,7 +208,6 @@ router
                         expiresAt: refreshTokenExpiration
                     }),
 
-                    // 새로운 Refresh Token 저장
                     userRepo.createRefreshToken({
                         userUuid: user.uuid,
                         jti: newRefreshJti,
